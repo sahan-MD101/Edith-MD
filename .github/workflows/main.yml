@@ -1,0 +1,55 @@
+name: Node.js CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    strategy:
+      matrix:
+        node-version: [20.x]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        # Use npm ci in CI for reproducible installs
+        run: npm ci
+
+      - name: Run tests
+        # Prefer running your test suite rather than starting a long-lived server.
+        run: npm test
+
+      # Optional: if you really need to start the app for integration tests:
+      # - name: Start application in background
+      #   run: |
+      #     nohup npm start > app.log 2>&1 & echo $! > /tmp/app.pid
+      #     sleep 5
+      # - name: Run integration tests
+      #   run: npm run test:integration
+      # - name: Stop application
+      #   if: always()
+      #   run: kill $(cat /tmp/app.pid) || true
